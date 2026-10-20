@@ -336,8 +336,10 @@ class MusicPlayer {
     this.channel = channel
 
     if (trackId) {
+      // only a genuinely different song restarts from the beginning — coming
+      // back to the scrapbook (or flipping pages) resumes where it was left
+      if (trackId !== this.cursor[channel]) this.position[channel] = 0
       this.cursor[channel] = trackId
-      this.position[channel] = 0
     }
     if (!this.cursor[channel]) this.cursor[channel] = this.defaultId(channel)
 
@@ -382,15 +384,26 @@ class MusicPlayer {
   }
 
   /** Change the song while reading — stays inside the dream channel. */
-  async setDreamTrack(trackId) {
+  async setDreamTrack(trackId, { force = false } = {}) {
     if (this.channel !== 'dream') {
+      if (trackId !== this.cursor.dream) this.position.dream = 0
       this.cursor.dream = trackId
-      this.position.dream = 0
       return
     }
+
+    // already the current song: never interrupt it, just resume if paused
+    if (!force && trackId === this.cursor.dream) {
+      if (!this.playing.dream && !this.dreamMuted) {
+        const resumed = await this.startCurrent()
+        if (resumed) await this.fadeTo(this.effectiveVolume(), FADE_IN_MS)
+        this.emit()
+      }
+      return
+    }
+
     const gen = ++this.generation
     if (this.playing.dream) {
-      await this.fadeTo(0, FADE_OUT_MS)
+      await this.fadeTo(0, 180)
       if (gen !== this.generation) return
     }
     this.stopEngines()
@@ -403,7 +416,7 @@ class MusicPlayer {
     }
     const ok = await this.startCurrent()
     if (gen !== this.generation) return
-    if (ok) await this.fadeTo(this.effectiveVolume(), FADE_IN_MS)
+    if (ok) await this.fadeTo(this.effectiveVolume(), 520)
     this.emit()
   }
 

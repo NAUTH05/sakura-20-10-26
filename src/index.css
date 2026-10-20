@@ -843,6 +843,7 @@ body {
 .dream__card {
   position: relative;
   width: min(1020px, 94vw);
+  min-height: min(600px, 86vh);
   max-height: 88vh;
   display: grid;
   grid-template-columns: 1.08fr 1fr;
@@ -896,25 +897,33 @@ body {
 }
 
 .dream__frame {
+  --mat: 10px;
+  --mat-bottom: 46px;
   position: relative;
-  flex: 1;
-  min-height: 220px;
+  flex: 1 1 0;
+  min-height: 260px;
   border-radius: 4px;
   background: #fff;
-  padding: 10px 10px 46px;
+  padding: var(--mat) var(--mat) var(--mat-bottom);
   box-shadow: 0 24px 45px -22px rgba(60, 40, 55, 0.55), 0 2px 6px rgba(60, 40, 55, 0.15);
   transform: rotate(-1.3deg);
   overflow: hidden;
   display: flex;
 }
 
+/* the whole photo must be visible — letterbox it on a paper mat instead of
+   cropping, and take the image out of the layout so a tall photo can never
+   stretch the card or push the thumbnails off-screen */
 .dream__frame img,
 .dream__frame .dream__photo-missing {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  position: absolute;
+  top: var(--mat);
+  left: var(--mat);
+  width: calc(100% - var(--mat) * 2);
+  height: calc(100% - var(--mat) - var(--mat-bottom));
+  object-fit: contain;
   border-radius: 2px;
-  background: #ddd2cc;
+  background: #ece2da;
 }
 
 .dream__frame--in {
@@ -1529,6 +1538,7 @@ body {
   .dream__card {
     grid-template-columns: 1fr;
     width: min(560px, 96vw);
+    min-height: 0;
     max-height: 92vh;
     overflow-y: auto;
   }
@@ -1538,9 +1548,10 @@ body {
   }
 
   .dream__frame {
-    min-height: 190px;
-    max-height: 38vh;
-    padding: 8px 8px 34px;
+    --mat: 8px;
+    --mat-bottom: 34px;
+    min-height: 250px;
+    max-height: 46vh;
   }
 
   .dream__content {

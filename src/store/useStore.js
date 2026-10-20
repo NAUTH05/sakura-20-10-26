@@ -97,8 +97,9 @@ export const useStore = create((set, get) => ({
     const i = Math.max(0, Math.min(index, memories.length - 1))
     set({ dreamIndex: i })
     // a page may carry its own song; pages without one keep the current track
+    // (and the same song keeps playing from where it is)
     const trackId = memories[i]?.trackId
-    if (trackId) player.setDreamTrack(trackId)
+    if (trackId && trackId !== player.snapshot().trackId) player.setDreamTrack(trackId)
   },
   nextDream() {
     get().setDreamIndex(get().dreamIndex + 1)
