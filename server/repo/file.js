@@ -59,6 +59,7 @@ export function createFileRepo(dataDir) {
         url: trackUrl(t),
         key: t.key,
         isDefault: !!t.isDefault,
+        scope: t.scope || 'both',
         sort: t.sort,
       }))
 
@@ -180,7 +181,7 @@ export function createFileRepo(dataDir) {
       })
     },
 
-    async createTrack({ title, key = null, url = null }) {
+    async createTrack({ title, key = null, url = null, scope = 'both' }) {
       return mutate((s) => {
         const sort = s.tracks.reduce((m, x) => Math.max(m, x.sort), -1) + 1
         const track = {
@@ -188,6 +189,7 @@ export function createFileRepo(dataDir) {
           title: title || 'Untitled track',
           key,
           url,
+          scope,
           isDefault: false,
           sort,
           createdAt: nowISO(),
@@ -203,6 +205,7 @@ export function createFileRepo(dataDir) {
         const t = s.tracks.find((x) => x.id === id)
         if (!t) return false
         if (patch.title !== undefined) t.title = patch.title
+        if (patch.scope !== undefined) t.scope = patch.scope
         if (patch.isDefault !== undefined) t.isDefault = !!patch.isDefault
         if (patch.sort !== undefined) t.sort = patch.sort
         return true

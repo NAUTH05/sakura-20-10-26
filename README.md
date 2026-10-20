@@ -56,6 +56,21 @@ npm run preview    # preview the build (API included)
 
 Keyboard: `1/2/3` cameras · `W` weather · `M` music · `Q` quality · `H` hide UI · `←/→/Esc` in the scrapbook.
 
+### Music
+
+Two independent channels share **one** audio player, so songs never overlap:
+
+* **City** — plays while exploring; its own playlist and volume.
+* **Dream** — plays while reading. Opening the scrapbook fades the city song out (remembering its
+  exact position) and fades the dream song in; closing it fades back and resumes the city track
+  where it left off. A song can belong to either playlist or both.
+
+The ♪ button in the top-right corner of the scrapbook opens a compact panel with play/pause,
+previous/next, volume, loop, the dream playlist and a *“Tắt nhạc khi đọc thư”* switch. It is laid
+out as a third column on desktop and as a block below the letter on mobile, so it never covers the
+photos or the text. Volume, loop and the mute preference are remembered in the browser; the
+defaults come from **/admin → Dream Music**.
+
 ---
 
 ## Admin (`/admin`)
@@ -63,7 +78,8 @@ Keyboard: `1/2/3` cameras · `W` weather · `M` music · `Q` quality · `H` hide
 | Section | What you can change |
 | --- | --- |
 | **Dreams** | Create / edit / delete memories, upload photos (multiple per memory), title, letter, date, per-memory music, visibility, drag & drop ordering, live preview |
-| **Music** | Upload MP3/M4A/OGG/WAV, rename, set the default track, delete, preview |
+| **Music** | Upload MP3/M4A/OGG/WAV, rename, set the default track, choose which playlist a song belongs to (City / Dream / both), delete, preview |
+| **Dream Music** | Autoplay when the letter opens, default dream track, default volume, dedicated dream playlist (upload or pull in an existing song) |
 | **Couples** | Number of NPC couples (0–5), walking speed, behaviour (wander / stroll / lingering), on/off |
 | **Environment** | Petal density, light intensity, rain, fog, bloom |
 | **General** | Site title, welcome copy, intro line, hover hint, wake label, final letter, special date, default camera, default music + volume |
@@ -130,6 +146,8 @@ wrangler r2 bucket create sakura-city-media
 
 # 2. put the database id into wrangler.toml, then create the tables
 wrangler d1 execute sakura-city --remote --file=schema.sql
+#    existing databases (created before the dream-music update):
+wrangler d1 execute sakura-city --remote --file=migrations/001_track_scope.sql
 
 # 3. secrets (never in wrangler.toml)
 wrangler pages secret put ADMIN_PASSWORD

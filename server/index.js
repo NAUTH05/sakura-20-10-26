@@ -169,6 +169,9 @@ async function serveStatic(req, res, url) {
 async function serveApi(req, res, origin) {
   const request = await toWebRequest(req, origin)
   const response = await handleApi(request, { repo, storage, env })
+  if (process.env.DEBUG_MEDIA && req.url.includes('/api/media')) {
+    console.log('[media]', req.method, req.headers.range || '-', '->', response.status, req.url.split('/').pop())
+  }
 
   // byte ranges so the audio element can seek
   const range = req.headers.range
@@ -185,6 +188,18 @@ async function serveApi(req, res, origin) {
       if (start > end || start >= size) {
         res.writeHead(416, { 'content-range': `bytes */${size}` })
         return res.end()
+      }
+
+      // a range that covers the whole file is answered with a plain 200 —
+      // some media stacks mishandle 206 + full-length bodies
+      if (start === 0 && end === size - 1) {
+        res.writeHead(200, {
+          'content-type': response.headers.get('content-type') || 'application/octet-stream',
+          'content-length': String(size),
+          'accept-ranges': 'bytes',
+          'cache-control': response.headers.get('cache-control') || 'public, max-age=31536000',
+        })
+        return res.end(buffer)
       }
 
       const chunk = buffer.subarray(start, end + 1)

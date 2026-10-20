@@ -110,6 +110,7 @@ export default function AdminApp() {
   const sections = [
     { id: 'dreams', label: 'Dreams', count: content.memories.length },
     { id: 'music', label: 'Music', count: content.tracks.length },
+    { id: 'dream-music', label: 'Dream Music' },
     { id: 'couples', label: 'Couples' },
     { id: 'environment', label: 'Environment' },
     { id: 'general', label: 'General' },
@@ -157,6 +158,9 @@ export default function AdminApp() {
         <div className="adm-body">
           {section === 'dreams' && <DreamManager content={content} refresh={refresh} notify={notify} />}
           {section === 'music' && <MusicManager content={content} refresh={refresh} notify={notify} />}
+          {section === 'dream-music' && (
+            <DreamMusicManager content={content} refresh={refresh} notify={notify} />
+          )}
           {(section === 'couples' || section === 'environment' || section === 'general') && (
             <SettingsManager section={section} content={content} refresh={refresh} notify={notify} />
           )}
@@ -376,10 +380,12 @@ function DreamManager({ content, refresh, notify }) {
                     value={draft.trackId || ''}
                     onChange={(e) => setDraft({ ...draft, trackId: e.target.value })}
                   >
-                    <option value="">— Không —</option>
-                    {content.tracks.map((t) => (
-                      <option key={t.id} value={t.id}>{t.title}</option>
-                    ))}
+                    <option value="">— Theo bài mặc định —</option>
+                    {content.tracks
+                      .filter((t) => (t.scope || 'both') === 'both' || t.scope === 'dream')
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
                   </select>
                 </Field>
               </div>
@@ -441,6 +447,7 @@ function DreamManager({ content, refresh, notify }) {
 function MusicManager({ content, refresh, notify }) {
   const [title, setTitle] = useState('')
   const [file, setFile] = useState(null)
+  const [scope, setScope] = useState('both')
   const [busy, setBusy] = useState(false)
   const [renaming, setRenaming] = useState({})
 
@@ -449,7 +456,7 @@ function MusicManager({ content, refresh, notify }) {
     if (!file) return
     setBusy(true)
     try {
-      await api.uploadTrack(file, title || file.name.replace(/\.[^.]+$/, ''))
+      await api.uploadTrack(file, title || file.name.replace(/\.[^.]+$/, ''), scope)
       setTitle('')
       setFile(null)
       e.target.reset()
@@ -498,7 +505,7 @@ function MusicManager({ content, refresh, notify }) {
   return (
     <div className="adm-stack">
       <Card title="Thêm nhạc" description="MP3 / M4A / OGG / WAV, tối đa 20MB.">
-        <form className="adm-upload-row" onSubmit={upload}>
+        <form className="adm-upload-row adm-upload-row--music" onSubmit={upload}>
           <Field label="Tên bài hát">
             <TextInput value={title} onChange={setTitle} placeholder="Ví dụ: Until I Found You" />
           </Field>
@@ -509,6 +516,13 @@ function MusicManager({ content, refresh, notify }) {
               accept="audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav,audio/webm"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
+          </Field>
+          <Field label="Dùng cho">
+            <select className="adm-input" value={scope} onChange={(e) => setScope(e.target.value)}>
+              <option value="both">Cả hai</option>
+              <option value="city">Sakura City</option>
+              <option value="dream">Đọc thư</option>
+            </select>
           </Field>
           <Button variant="primary" type="submit" disabled={!file || busy}>
             {busy ? 'Đang tải…' : 'Tải lên'}
@@ -534,6 +548,24 @@ function MusicManager({ content, refresh, notify }) {
                 onChange={(e) => setRenaming((r) => ({ ...r, [t.id]: e.target.value }))}
                 onBlur={() => rename(t)}
               />
+              <select
+                className="adm-input adm-input--mini"
+                value={t.scope || 'both'}
+                onChange={async (e) => {
+                  try {
+                    await api.updateTrack(t.id, { scope: e.target.value })
+                    await refresh()
+                    notify('Đã đổi danh sách nhạc')
+                  } catch (err) {
+                    notify(err.message, 'error')
+                  }
+                }}
+                title="Danh sách nhạc"
+              >
+                <option value="both">Cả hai</option>
+                <option value="city">City</option>
+                <option value="dream">Dream</option>
+              </select>
               <span className="adm-track-url">{t.url === 'ambient:' ? 'generated' : 'file'}</span>
               <audio controls preload="none" src={t.url === 'ambient:' ? undefined : t.url} />
               <Button variant="danger" onClick={() => remove(t)} disabled={t.id === 'ambient'}>
@@ -543,6 +575,190 @@ function MusicManager({ content, refresh, notify }) {
           ))}
           {!content.tracks.length && <li className="adm-empty">Chưa có bài nào.</li>}
         </ul>
+      </Card>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------ dream music */
+
+function DreamMusicManager({ content, refresh, notify }) {
+  const [title, setTitle] = useState('')
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [pick, setPick] = useState('')
+
+  const settings = content.settings
+  const dreamTracks = content.tracks.filter(
+    (t) => (t.scope || 'both') === 'both' || t.scope === 'dream'
+  )
+  const cityOnly = content.tracks.filter((t) => t.scope === 'city')
+
+  const saveSettings = async (patch, message) => {
+    try {
+      await api.saveSettings(patch)
+      await refresh()
+      notify(message)
+    } catch (err) {
+      notify(err.message, 'error')
+    }
+  }
+
+  const upload = async (e) => {
+    e.preventDefault()
+    if (!file) return
+    setBusy(true)
+    try {
+      await api.uploadTrack(file, title || file.name.replace(/\.[^.]+$/, ''), 'dream')
+      setTitle('')
+      setFile(null)
+      e.target.reset()
+      await refresh()
+      notify('Đã thêm bài hát cho phần đọc thư')
+    } catch (err) {
+      notify(err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeFromDream = async (t) => {
+    try {
+      await api.updateTrack(t.id, { scope: 'city' })
+      if (settings.dreamMusicDefaultId === t.id) {
+        await api.saveSettings({ dreamMusicDefaultId: null })
+      }
+      await refresh()
+      notify('Đã bỏ khỏi danh sách đọc thư')
+    } catch (err) {
+      notify(err.message, 'error')
+    }
+  }
+
+  const addToDream = async () => {
+    if (!pick) return
+    try {
+      await api.updateTrack(pick, { scope: 'both' })
+      setPick('')
+      await refresh()
+      notify('Đã thêm vào danh sách đọc thư')
+    } catch (err) {
+      notify(err.message, 'error')
+    }
+  }
+
+  return (
+    <div className="adm-stack">
+      <Card
+        title="Phát nhạc khi mở thư"
+        description="Nhạc riêng cho Dream Memories, tách khỏi nhạc của Sakura City."
+      >
+        <div className="adm-settings">
+          <Toggle
+            label="Tự phát khi mở thư"
+            hint="Tắt để mở popup trong im lặng — người đọc có thể bật lại trong bảng nhạc."
+            checked={settings.dreamMusicEnabled !== false}
+            onChange={(v) => saveSettings({ dreamMusicEnabled: v }, 'Đã cập nhật')}
+          />
+          <Field label="Bài mặc định khi mở thư">
+            <select
+              className="adm-input"
+              value={settings.dreamMusicDefaultId || ''}
+              onChange={(e) =>
+                saveSettings({ dreamMusicDefaultId: e.target.value || null }, 'Đã đặt bài mặc định')
+              }
+            >
+              <option value="">— Bài đầu tiên trong danh sách —</option>
+              {dreamTracks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Range
+            label="Âm lượng mặc định khi đọc thư"
+            min={0}
+            max={1}
+            step={0.05}
+            value={settings.dreamMusicVolume ?? 0.5}
+            onChange={(v) => saveSettings({ dreamMusicVolume: v }, 'Đã lưu âm lượng')}
+            format={(v) => `${Math.round(v * 100)}%`}
+          />
+          <p className="adm-hint">
+            Người đọc có thể tự chỉnh âm lượng, đổi bài hoặc tắt nhạc ngay trong popup — lựa chọn của
+            họ được ghi nhớ trên trình duyệt.
+          </p>
+        </div>
+      </Card>
+
+      <Card title="Thêm nhạc cho phần đọc thư" description="MP3 / M4A / OGG / WAV, tối đa 20MB.">
+        <form className="adm-upload-row adm-upload-row--music" onSubmit={upload}>
+          <Field label="Tên bài hát">
+            <TextInput value={title} onChange={setTitle} placeholder="Ví dụ: Until I Found You" />
+          </Field>
+          <Field label="Tệp âm thanh">
+            <input
+              className="adm-input adm-file"
+              type="file"
+              accept="audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav,audio/webm"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </Field>
+          <Button variant="primary" type="submit" disabled={!file || busy}>
+            {busy ? 'Đang tải…' : 'Tải lên'}
+          </Button>
+        </form>
+      </Card>
+
+      <Card
+        title={`Danh sách nhạc đọc thư (${dreamTracks.length})`}
+        description="Chỉ những bài ở đây mới xuất hiện trong popup Dream Memories."
+      >
+        <ul className="adm-tracks">
+          {dreamTracks.map((t) => (
+            <li key={t.id} className={settings.dreamMusicDefaultId === t.id ? 'is-default' : ''}>
+              <span className="adm-track-url">{t.scope === 'both' ? 'city + dream' : 'dream'}</span>
+              <input
+                className="adm-input adm-input--ghost"
+                defaultValue={t.title}
+                onBlur={async (e) => {
+                  if (e.target.value === t.title) return
+                  try {
+                    await api.updateTrack(t.id, { title: e.target.value })
+                    await refresh()
+                    notify('Đã đổi tên')
+                  } catch (err) {
+                    notify(err.message, 'error')
+                  }
+                }}
+              />
+              <audio controls preload="none" src={t.url === 'ambient:' ? undefined : t.url} />
+              <Button variant="danger" onClick={() => removeFromDream(t)}>
+                Bỏ
+              </Button>
+            </li>
+          ))}
+          {!dreamTracks.length && (
+            <li className="adm-empty">Chưa có bài nào — tải lên ở trên hoặc thêm từ danh sách City.</li>
+          )}
+        </ul>
+
+        {cityOnly.length > 0 && (
+          <div className="adm-add-row">
+            <select className="adm-input" value={pick} onChange={(e) => setPick(e.target.value)}>
+              <option value="">— Thêm bài đang có vào phần đọc thư —</option>
+              {cityOnly.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+            <Button onClick={addToDream} disabled={!pick}>
+              Thêm
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   )

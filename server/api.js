@@ -48,6 +48,9 @@ const SETTINGS_SCHEMA = {
   defaultCamera: ['overview', 'road', 'cinematic'],
   musicDefaultId: 'stringOrNull',
   musicVolume: 'number',
+  dreamMusicEnabled: 'boolean',
+  dreamMusicDefaultId: 'stringOrNull',
+  dreamMusicVolume: 'number',
   petalIntensity: 'number',
   lightIntensity: 'number',
   rain: 'boolean',
@@ -295,7 +298,12 @@ export async function handleApi(request, ctx) {
       const result = await saveUpload(form, storage, 'audio')
       if (result.error) return result.error
       const title = form ? String(form.get('title') || '') : ''
-      const id = await repo.createTrack({ title: title || 'Untitled track', key: result.key })
+      const scope = form ? String(form.get('scope') || 'both') : 'both'
+      const id = await repo.createTrack({
+        title: title || 'Untitled track',
+        key: result.key,
+        scope: ['city', 'dream', 'both'].includes(scope) ? scope : 'both',
+      })
       return json({ ok: true, id })
     }
     const body = (await readJson(request)) || {}
@@ -311,6 +319,7 @@ export async function handleApi(request, ctx) {
     if (typeof body.title === 'string') patch.title = body.title.slice(0, 200)
     if (body.isDefault !== undefined) patch.isDefault = !!body.isDefault
     if (typeof body.sort === 'number') patch.sort = body.sort
+    if (['city', 'dream', 'both'].includes(body.scope)) patch.scope = body.scope
     const ok = await repo.updateTrack(trackId[1], patch)
     return ok ? json({ ok: true }) : fail('Track not found', 404)
   }

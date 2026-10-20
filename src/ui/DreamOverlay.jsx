@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
+import DreamMusicPanel from './DreamMusicPanel'
+import { IconNote } from './musicIcons'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -38,6 +40,7 @@ export default function DreamOverlay() {
 
   const [imageIndex, setImageIndex] = useState(0)
   const [direction, setDirection] = useState(1)
+  const [musicOpen, setMusicOpen] = useState(false)
   const lastIndex = useRef(index)
 
   const open = stage === 'dream'
@@ -54,6 +57,11 @@ export default function DreamOverlay() {
     }
     setImageIndex(0)
   }, [index])
+
+  // the music drawer belongs to a single visit to the scrapbook
+  useEffect(() => {
+    if (!open) setMusicOpen(false)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -81,13 +89,31 @@ export default function DreamOverlay() {
     <div className={`dream ${open ? 'is-open' : ''}`} aria-hidden={!open}>
       <div className="dream__scrim" onClick={closeDream} />
 
-      <article className="dream__card" role="dialog" aria-modal="true" aria-label={memory.title}>
-        <button className="dream__close" type="button" onClick={closeDream} aria-label="Đóng">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          </svg>
-        </button>
+      <article
+        className={`dream__card ${musicOpen ? 'dream__card--music' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={memory.title}
+      >
+        <div className="dream__actions">
+          <button
+            type="button"
+            className={`dream__music-toggle ${musicOpen ? 'is-on' : ''}`}
+            onClick={() => setMusicOpen((v) => !v)}
+            aria-label="Music settings"
+            aria-expanded={musicOpen}
+            title="Music settings"
+          >
+            <IconNote size={15} />
+          </button>
+          <button className="dream__close" type="button" onClick={closeDream} aria-label="Đóng">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
 
+        <div className="dream__scroll">
         <div className="dream__media">
           <div className={`dream__frame dream__frame--${direction > 0 ? 'in' : 'back'}`} key={`${memory.id}-${imageIndex}`}>
             <Photo image={images[imageIndex]} alt={memory.title} />
@@ -171,6 +197,9 @@ export default function DreamOverlay() {
               {settings.wakeLabel || 'Wake up together'}
             </button>
           )}
+        </div>
+
+        {musicOpen && <DreamMusicPanel />}
         </div>
       </article>
     </div>

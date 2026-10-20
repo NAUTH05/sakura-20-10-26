@@ -32,8 +32,13 @@ export const useStore = create((set, get) => ({
         contentError: null,
         weather: content.settings.rain ? 'rain' : 'clear',
       })
-      player.setTracks(content.tracks, content.settings.musicDefaultId)
-      player.setVolume(content.settings.musicVolume ?? player.volume)
+      player.setTracks(content.tracks, {
+        cityDefaultId: content.settings.musicDefaultId,
+        dreamDefaultId: content.settings.dreamMusicDefaultId,
+        dreamAutoplay: content.settings.dreamMusicEnabled !== false,
+        cityVolume: content.settings.musicVolume,
+        dreamVolume: content.settings.dreamMusicVolume,
+      })
       return content
     } catch (err) {
       set({
@@ -59,40 +64,31 @@ export const useStore = create((set, get) => ({
     }
     const idx = Math.max(0, Math.min(index ?? get().dreamIndex, memories.length - 1))
     const memory = memories[idx]
-    const musicState = player.snapshot()
 
-    if (memory?.trackId && memory.trackId !== musicState.trackId) {
-      player.load(memory.trackId, { autoplay: musicState.playing })
-      set({ dreamMusicSwitched: true })
-    } else {
-      player.setDucked(true)
-      set({ dreamMusicSwitched: false })
-    }
+    // city music fades out, the dream track fades in (its position is kept)
+    player.enterDream({
+      trackId: memory?.trackId || null,
+      autoplay: content.settings.dreamMusicEnabled !== false,
+    })
 
     set({ stage: 'dream', dreamIndex: idx })
   },
 
-  closeDream() {
+  /** Leaves the scrapbook and hands the music back to Sakura City. */
+  leaveDream() {
     set({ stage: 'explore' })
-    player.setDucked(false)
-    if (get().dreamMusicSwitched) {
-      const { content } = get()
-      const fallback =
-        content.tracks.find((t) => t.id === content.settings.musicDefaultId) ||
-        content.tracks.find((t) => t.isDefault) ||
-        content.tracks[0]
-      if (fallback) player.load(fallback.id, { autoplay: player.snapshot().playing })
-      set({ dreamMusicSwitched: false })
-    }
+    player.exitDream()
+  },
+
+  closeDream() {
+    get().leaveDream()
   },
 
   wakeUp() {
     set({ stage: 'waking', wakeStartedAt: Date.now() })
-    player.setDucked(false)
   },
 
   dreamIndex: 0,
-  dreamMusicSwitched: false,
   wakeStartedAt: 0,
 
   setDreamIndex(index) {
@@ -100,12 +96,9 @@ export const useStore = create((set, get) => ({
     if (!memories.length) return
     const i = Math.max(0, Math.min(index, memories.length - 1))
     set({ dreamIndex: i })
-    const memory = memories[i]
-    const musicState = player.snapshot()
-    if (memory?.trackId && memory.trackId !== musicState.trackId) {
-      player.load(memory.trackId, { autoplay: musicState.playing })
-      set({ dreamMusicSwitched: true })
-    }
+    // a page may carry its own song; pages without one keep the current track
+    const trackId = memories[i]?.trackId
+    if (trackId) player.setDreamTrack(trackId)
   },
   nextDream() {
     get().setDreamIndex(get().dreamIndex + 1)
@@ -146,24 +139,32 @@ export const useStore = create((set, get) => ({
 
   // ---------------------------------------------------------------- music
   music: {
+    mode: 'city',
     playing: false,
     trackId: null,
     volume: 0.55,
+    cityVolume: 0.55,
+    dreamVolume: 0.55,
     loop: true,
     error: null,
     tracks: [],
+    dreamMuted: false,
   },
 
   syncMusic() {
     const s = player.snapshot()
     set({
       music: {
+        mode: s.mode,
         playing: s.playing,
         trackId: s.trackId,
         volume: s.volume,
+        cityVolume: s.cityVolume,
+        dreamVolume: s.dreamVolume,
         loop: s.loop,
         error: s.error,
         tracks: s.tracks,
+        dreamMuted: s.dreamMuted,
       },
     })
   },
@@ -173,9 +174,9 @@ export const useStore = create((set, get) => ({
     const preferred =
       content.tracks.find((t) => t.id === content.settings.musicDefaultId) ||
       content.tracks.find((t) => t.isDefault) ||
-      content.tracks[0]
+      player.snapshot().tracks[0]
     if (preferred) {
-      await player.load(preferred.id, { autoplay: true })
+      await player.play(preferred.id)
     }
     get().syncMusic()
   },

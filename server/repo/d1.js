@@ -71,6 +71,7 @@ export function createD1Repo(db) {
         key: t.key,
         url: trackUrl({ url: t.url, key: t.key }),
         isDefault: !!t.is_default,
+        scope: t.scope || 'both',
         sort: t.sort || 0,
       }))
 
@@ -186,14 +187,14 @@ export function createD1Repo(db) {
       return row?.key || null
     },
 
-    async createTrack({ title, key = null, url = null }) {
+    async createTrack({ title, key = null, url = null, scope = 'both' }) {
       const id = uid()
       const row = await db.prepare('SELECT COALESCE(MAX(sort), -1) AS s FROM tracks').first()
       await db
         .prepare(
-          'INSERT INTO tracks (id, title, key, url, is_default, sort, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)'
+          'INSERT INTO tracks (id, title, key, url, scope, is_default, sort, created_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)'
         )
-        .bind(id, title || 'Untitled track', key, url, (row?.s ?? -1) + 1, nowISO())
+        .bind(id, title || 'Untitled track', key, url, scope, (row?.s ?? -1) + 1, nowISO())
         .run()
       return id
     },
@@ -206,6 +207,9 @@ export function createD1Repo(db) {
       }
       if (patch.title !== undefined) {
         stmts.push(db.prepare('UPDATE tracks SET title = ? WHERE id = ?').bind(patch.title, id))
+      }
+      if (patch.scope !== undefined) {
+        stmts.push(db.prepare('UPDATE tracks SET scope = ? WHERE id = ?').bind(patch.scope, id))
       }
       if (!stmts.length) return true
       await db.batch(stmts)

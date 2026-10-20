@@ -4,14 +4,15 @@ import { useStore } from '../store/useStore'
 export default function LetterOverlay() {
   const stage = useStore((s) => s.stage)
   const settings = useStore((s) => s.content.settings)
-  const setStage = useStore((s) => s.setStage)
   const setCameraMode = useStore((s) => s.setCameraMode)
+  const leaveDream = useStore((s) => s.leaveDream)
 
   const open = stage === 'letter'
 
   const close = () => {
     setCameraMode(settings.defaultCamera || 'overview')
-    setStage('explore')
+    // hands the music back to the city at the position it was paused
+    leaveDream()
   }
 
   return (

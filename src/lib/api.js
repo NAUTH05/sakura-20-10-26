@@ -51,10 +51,11 @@ export const api = {
   },
   deleteImage: (id) => request(`/admin/images/${id}`, { method: 'DELETE' }),
 
-  uploadTrack: (file, title) => {
+  uploadTrack: (file, title, scope = 'both') => {
     const form = new FormData()
     form.append('file', file)
     form.append('title', title)
+    form.append('scope', scope)
     return request('/admin/tracks', { method: 'POST', body: form })
   },
   updateTrack: (id, data) =>
