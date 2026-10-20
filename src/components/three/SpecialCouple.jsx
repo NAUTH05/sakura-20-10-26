@@ -209,6 +209,7 @@ export default function SpecialCouple() {
   const stage = useStore((s) => s.stage)
   const settings = useStore((s) => s.content.settings)
   const hover = useStore((s) => s.hoverCouple)
+  const uiHidden = useStore((s) => s.uiHidden)
   const setHover = useStore((s) => s.setHoverCouple)
   const enterDream = useStore((s) => s.enterDream)
 
@@ -329,7 +330,7 @@ export default function SpecialCouple() {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {stage === 'explore' && (
+      {stage === 'explore' && !uiHidden && (
         <Html position={[0, 2.25, 0]} center zIndexRange={[15, 10]} style={{ pointerEvents: 'none' }}>
           <div className={`couple-hint ${isHover ? 'is-hot' : ''}`}>
             <span className="couple-hint__heart">♡</span>
