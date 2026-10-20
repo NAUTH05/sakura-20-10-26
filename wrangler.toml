@@ -1,0 +1,19 @@
+name = "mini-sakura-city"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# D1 — content, memories, playlist, settings
+[[d1_databases]]
+binding = "DB"
+database_name = "sakura-city"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# R2 — uploaded photos and music
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "sakura-city-media"
+
+[vars]
+# Never put secrets here. Set them once with:
+#   wrangler pages secret put ADMIN_PASSWORD
+#   wrangler pages secret put SESSION_SECRET

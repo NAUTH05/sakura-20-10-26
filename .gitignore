@@ -1,0 +1,33 @@
+# dependencies
+node_modules
+
+# build output
+dist
+dist-ssr
+.vite
+
+# local data — NEVER commit the database or user uploads
+.data
+
+# secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.DS_Store
+*.local
+.idea
+.vscode
+
+# vite temp files
+vite.config.js.timestamp-*.mjs
+
+# assistant workspace metadata
+.workbuddy-ai
