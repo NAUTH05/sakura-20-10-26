@@ -1,4 +1,5 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
+import { useThree } from '@react-three/fiber'
 import { PALETTE } from '../config/site'
 import { useStore } from '../store/useStore'
 
@@ -31,6 +32,12 @@ export default function Experience() {
   const quality = useStore((s) => s.quality)
   const weather = useStore((s) => s.weather)
   const settings = useStore((s) => s.content.settings)
+  const scene = useThree((s) => s.scene)
+
+  // dev-only scene handle (stripped from production builds)
+  useEffect(() => {
+    if (import.meta.env?.DEV) window.__scene = scene
+  }, [scene])
 
   const rain = weather === 'rain'
   const fog = settings.fog !== false

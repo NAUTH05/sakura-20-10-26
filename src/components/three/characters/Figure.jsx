@@ -135,7 +135,7 @@ export default function Figure({
         <group
           ref={armL}
           position={[0, 1.32, isF ? 0.185 : 0.205]}
-          rotation={[holdSide === 1 ? 0.55 : 0, 0, 0]}
+          rotation={[holdSide === 1 ? -0.3 : 0, 0, 0]}
         >
           <mesh castShadow position={[0, -0.26, 0]}>
             <capsuleGeometry args={[0.045, 0.42, 3, 6]} />
@@ -149,7 +149,7 @@ export default function Figure({
         <group
           ref={armR}
           position={[0, 1.32, isF ? -0.185 : -0.205]}
-          rotation={[holdSide === -1 ? -0.55 : 0, 0, 0]}
+          rotation={[holdSide === -1 ? 0.3 : 0, 0, 0]}
         >
           <mesh castShadow position={[0, -0.26, 0]}>
             <capsuleGeometry args={[0.045, 0.42, 3, 6]} />

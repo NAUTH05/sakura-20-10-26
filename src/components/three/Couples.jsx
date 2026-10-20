@@ -61,8 +61,8 @@ export default function Couples({ count = 4, speed = 1, behavior = 'wander', ena
         outfitB,
         variantA: 'm',
         variantB: 'f',
-        heightA: rand(rng, 1.66, 1.78),
-        heightB: rand(rng, 1.5, 1.62),
+        heightA: rand(rng, 1.68, 1.76),
+        heightB: rand(rng, 1.58, 1.66),
       }
     })
   }, [count])

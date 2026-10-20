@@ -35,19 +35,26 @@ function SeatedPerson({ side, variant = 'm', colors, wake, delay = 0 }) {
     }
     if (chest.current) chest.current.scale.setScalar(1 + breath * 0.8)
 
-    // head: resting together while asleep, lifting and turning on wake
-    const sleepTilt = side * 0.24
+    // head: resting together while asleep, lifting and turning on wake.
+    // the head group sits at the centre of the skull, so rotating it alone only
+    // spins the face — the heads have to travel towards each other as well.
+    const girl = side > 0
+    const sleepTilt = side * 0.22
+    const sleepShift = -side * 0.07
+    const sleepDrop = girl ? -0.03 : 0
     const sleepYaw = 0
     const wakeTilt = side * 0.02
     const wakeYaw = side * 0.52
     if (head.current) {
+      head.current.position.x += (sleepShift * (1 - w) - head.current.position.x) * (1 - Math.exp(-dt * 3))
       head.current.rotation.z +=
         (sleepTilt + (wakeTilt - sleepTilt) * w - head.current.rotation.z) * (1 - Math.exp(-dt * 3))
       head.current.rotation.y +=
         (sleepYaw + (wakeYaw - sleepYaw) * w - head.current.rotation.y) * (1 - Math.exp(-dt * 3))
       head.current.rotation.x +=
         (0.04 + Math.sin(t * 0.7 + side) * 0.01 - head.current.rotation.x) * (1 - Math.exp(-dt * 3))
-      head.current.position.y = 0.585 + Math.sin(t * 1.05 + side) * 0.004 - w * 0.012
+      head.current.position.y =
+        0.585 + sleepDrop * (1 - w) + Math.sin(t * 1.05 + side) * 0.004 - w * 0.012
     }
     if (hair.current) {
       hair.current.rotation.z = Math.sin(t * 0.9 + side) * 0.02
@@ -67,7 +74,7 @@ function SeatedPerson({ side, variant = 'm', colors, wake, delay = 0 }) {
   })
 
   return (
-    <group position={[side * 0.235, 0.47, 0]} rotation={[0, 0, -side * 0.08]}>
+    <group position={[side * 0.235, 0.47, 0]} rotation={[0, 0, side * 0.1]}>
       <group ref={torso}>
         {/* torso */}
         <mesh castShadow position={[0, 0.28, 0]}>
@@ -123,7 +130,7 @@ function SeatedPerson({ side, variant = 'm', colors, wake, delay = 0 }) {
 
         {/* arms resting on the lap */}
         {[-1, 1].map((a) => (
-          <group key={a} position={[a * 0.175, 0.5, -0.01]} rotation={[-0.72, 0, a * 0.26]}>
+          <group key={a} position={[a * 0.15, 0.5, -0.02]} rotation={[-0.55, 0, -a * 0.14]}>
             <mesh castShadow position={[0, -0.2, 0]}>
               <capsuleGeometry args={[0.043, 0.32, 3, 6]} />
               <meshStandardMaterial color={colors.coat} roughness={0.84} flatShading />
@@ -141,7 +148,11 @@ function SeatedPerson({ side, variant = 'm', colors, wake, delay = 0 }) {
           <meshStandardMaterial color={colors.skin} roughness={0.9} />
         </mesh>
 
-        <group ref={head} position={[0, 0.585, 0]}>
+        <group
+          ref={head}
+          position={[-side * 0.07, 0.585 + (side > 0 ? -0.03 : 0), 0]}
+          rotation={[0.04, 0, side * 0.22]}
+        >
           <mesh castShadow>
             <sphereGeometry args={[0.128, 14, 12]} />
             <meshStandardMaterial color={colors.skin} roughness={0.85} flatShading />

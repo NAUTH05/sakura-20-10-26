@@ -413,9 +413,10 @@ class MusicPlayer {
       this.cursor[this.channel] = trackId
       this.position[this.channel] = 0
     }
-    const wasPlaying = this.playing[this.channel]
     const ok = await this.startCurrent()
-    if (ok && !wasPlaying) await this.fadeTo(this.effectiveVolume(), FADE_IN_MS)
+    // startCurrent always resets the element to 0, so always fade back in —
+    // otherwise switching songs while playing stays silent
+    if (ok) await this.fadeTo(this.effectiveVolume(), FADE_IN_MS)
     this.emit()
     return ok
   }
