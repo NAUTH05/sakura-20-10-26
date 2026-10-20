@@ -145,6 +145,78 @@ wrangler pages deploy dist
 
 ---
 
+## Deploying on a VPS with PM2 (Ubuntu)
+
+The production entry point is **`server/index.js`** — a small Node server (no extra framework)
+that serves `dist/` and the `/api/*` routes, backed by `.data/` (JSON database + uploads).
+The Vite dev server is **never** used in production.
+
+### 1. Prerequisites
+
+```bash
+node -v            # 18 or newer
+sudo npm i -g pm2
+```
+
+### 2. First deploy
+
+```bash
+git clone https://github.com/NAUTH05/sakura-20-10-26.git
+cd sakura-20-10-26
+
+cp .env.example .env
+nano .env          # set ADMIN_PASSWORD + SESSION_SECRET (openssl rand -hex 32)
+
+npm ci
+npm run build      # or: bash scripts/build.sh  (checks deps + verifies dist/)
+npm run pm2:start  # pm2 start ecosystem.config.cjs --env production
+pm2 save
+pm2 startup        # run the printed command so PM2 survives a reboot
+```
+
+The site is then on `http://<server-ip>:3000` (change `PORT` in `.env`).
+
+### 3. Everyday commands
+
+```bash
+# Build project
+npm run build
+
+# Start application with PM2
+pm2 start ecosystem.config.cjs --env production
+
+# Restart
+pm2 restart sakura-city --update-env
+
+# View logs
+pm2 logs sakura-city
+
+# Save process
+pm2 save
+```
+
+Shortcuts: `npm run pm2:start` · `npm run pm2:restart` · `npm run pm2:stop` · `npm run pm2:logs`.
+
+### 4. Updating
+
+```bash
+git pull
+npm run build
+pm2 restart sakura-city --update-env
+```
+
+### Notes
+
+* `.data/` holds the database and every uploaded photo/track. **Never delete it** — back it up
+  (`tar czf backup-$(date +%F).tgz .data`) and keep it out of git (already ignored).
+* `.env` is read by the server at boot; it is git-ignored. Without `ADMIN_PASSWORD` the server
+  falls back to the dev password and prints a warning.
+* `ecosystem.config.cjs` runs one `fork` process with `autorestart`, a 512 MB memory ceiling,
+  and logs in `logs/sakura-out.log` / `logs/sakura-error.log`.
+* Optional: put nginx in front for TLS and `proxy_pass http://127.0.0.1:3000`.
+
+---
+
 ## Notes on the 3D scene
 
 * The road runs along **X**; tree rows are parallel on both sides of Z; the city is a backdrop on −Z.
